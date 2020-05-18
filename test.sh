@@ -7,15 +7,36 @@ set -euo pipefail
 
 # Source Logging Library
 source ./logger.sh
+if [ ! -f ${log_file} ]; then touch ${log_file}; fi
 
+echo "log_file: ${log_file}"
+test() {
+    echo -e "\n\n"
+    stdout "DEBUG_FLAG= ${debug_flag}"
+    stdout "silent_debug= ${silent_debug}"
+    stdout "Test stdout"
+    info "Test info"
+    debug "Test debug"
+    # To test assert comment 'exit 1' in logger.sh assert() and uncomment below line
+    #assert "Test assert"
+}
 
-echo "NO debug_flag"
-echo -e "\nstdout_log: "; stdout_log "Test stdout_log"
-echo -e "\ndebugging: "; debugging "Test debugging"
+debug_flag="0"
+test
 
-echo -e "\n\n\n"
 debug_flag="1"
-echo "SET debug_flag"
-echo -e "\nstdout_log: "; stdout_log "Test stdout_log"
-echo -e "\ndebugging: "; debugging "Test debugging"
-echo -e "\nassert: "; assert "Test assert"
+test
+
+
+debug_flag="2"
+test
+
+debug_flag="3"
+test
+
+silent_debug="1"
+debug_flag="3"
+test
+
+cat ${log_file}
+rm ${log_file}
