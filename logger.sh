@@ -23,10 +23,10 @@
 #           silent_debug: defaults to '0'
 #               1 | enabled | supress all messages to stdout. Log as otherwise directed by debug_flag
 #           debug_flag: defaults to '0'
-#               0 | off               | log INFO, discard DEBUG 
-#               1 | verbose           | display/log INFO, discard DEBUG
-#               2 | very verbose      | display/log INFO, log DEBUG
-#               3 | extremely verbose | display/log INFO, display/log DEBUG
+#               0 | off               | display/log: [stdout, assert], log: [INFO], discard: [DEBUG] 
+#               1 | verbose           | display/log: [stdout, assert, info], discard: [debug]
+#               2 | very verbose      | display/log: [stdout, assert, info], log: [debug]
+#               3 | extremely verbose | display/log: [stdout, assert, info, debug]
 #
 #
 #   Each action above processes their message including leading tag and passes to log_and_print()
@@ -42,10 +42,22 @@ set -euo pipefail
 
 start_time=$(date +"%s.%N")
 
+# Initialize variables and set default values
 : "${debug_flag:=0}"
 : "${silent_debug:=0}"
 : "${package_name:="$(basename "$(readlink -fm "$0")")"}"
 : "${log_file:=""}"
+: "${init_log_file:=1}"
+
+init_log_file() {
+    if [ ! -f ${log_file} ]; then
+	if [ ! -r $(dirname ${log_file}) ]; then
+	    if ! $(mkdir -p $(dirname ${log_file})); then assert "Failed creating logfile directory: $(dirname ${log_file})"; fi
+	fi
+	if ! $(touch ${log_file}); then assert "Failed creating logfile: ${log_file}"; fi
+	if [ ! -w ${log_file} ]; then assert "Creation of log file: ${log_file} failed."; fi
+    fi
+}
 
 log_and_print() {
     if [ -f ${log_file} ]; then
@@ -109,7 +121,13 @@ info() {
 
 debug() {
     if [[ ${debug_flag} -gt 1 ]]; then
-	output="DEBUG: ${1}"
-	log_and_print "${output}"
+	if [[ -n "${1:-}" ]]; then
+	    log_and_print "DEBUG: ${1}"
+	else
+	    while read STDIN; do
+		message=${message:-}$'\n        '$STDIN
+	    done
+	    log_and_print "DEBUG: ${message}"
+	fi
     fi
 }
